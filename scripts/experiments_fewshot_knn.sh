@@ -1,5 +1,5 @@
 mkdir -p ../out/fewshot_128_knn_merge_mul_test
-parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python fewshot_knn.py {1} {2} {3} 128 merge_labels mul "[1, 2, 4, 8, 16]" ${arr[{%}]} |& tee ../out/fewshot_128_knn_merge_mul_test/{1}.txt' ::: \
+parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python fewshot_knn.py {1} {2} {3} 128 merge_labels mul mask "[1, 2, 4, 8, 16]" ${arr[{%}]} |& tee ../out/fewshot_128_knn_merge_mul_test/{1}.txt' ::: \
     SST-2 sst-2 2 \
     cr cr 2 \
     mr mr 2 \
@@ -18,7 +18,7 @@ parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python fewshot_knn.py {1} {2} {3} 128 
 
 mkdir -p ../out/fewshot_16_knn_merge_nomul
 #parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python fewshot_knn.py {1} {2} {3} 128 merge_labels mul ${arr[{%}]} |& tee ../out/fewshot_128_knn_merge/{1}.txt' ::: \
-parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python fewshot_knn.py {1} {2} {3} 16 merge_labels nomul "[1, 3, 5, 7, 9]" ${arr[{%}]} |& tee ../out/fewshot_16_knn_merge_nomul/{1}.txt' ::: \
+parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python fewshot_knn.py {1} {2} {3} 16 merge_labels nomul mask "[1, 3, 5, 7, 9]" ${arr[{%}]} |& tee ../out/fewshot_16_knn_merge_nomul/{1}.txt' ::: \
     SST-2 sst-2 2 \
     cr cr 2 \
     mr mr 2 \

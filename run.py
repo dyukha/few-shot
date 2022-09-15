@@ -277,6 +277,11 @@ class DynamicDataTrainingArguments(DataTrainingArguments):
         metadata={"help": "Use zero-shot learning even if we have demonstrations. Useful when you use demonstrations for other purposes (e.g. kNN), but don't need it for prompt"}
     )
 
+    use_mask_embeddings: bool = field(
+        default=False,
+        metadata={"help": "Use mask token embeddings instead of sentence imbeddings."}
+    )
+
 @dataclass
 class DynamicTrainingArguments(TrainingArguments):
     # For ensemble
@@ -538,7 +543,7 @@ def main():
 
     label_to_word, label_word_list = get_label_to_word(data_args, tokenizer)
 
-    if use_linear_fix:
+    if use_linear_fix or data_args.use_mask_embeddings:
         mask_embedding_training = get_mask_embedding_training(
             config,
             model_args.cache_dir,
@@ -559,6 +564,7 @@ def main():
             mode=mode,
             use_demo=("demo" in model_args.few_shot_type),
             use_knn=use_knn,
+            use_linear_fix=use_linear_fix,
             mask_embedding_training=mask_embedding_training,
             label_to_word=label_to_word,
             label_word_list=label_word_list,
@@ -693,6 +699,7 @@ def main():
                         cache_dir=None,
                         use_demo=('demo' in model_args.few_shot_type),
                         use_knn=use_knn,
+                        use_linear_fix=use_linear_fix,
                         mask_embedding_training=mask_embedding_training,
                         label_to_word=label_to_word,
                         label_word_list=label_word_list,

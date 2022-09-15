@@ -3,15 +3,23 @@ import sys
 import subprocess
 
 os.chdir("..")
-_, task, task_name, num_labels, k, merge_labels, mul, inputs, gpu = sys.argv
+_, task, task_name, num_labels, k, merge_labels, mul, mask_embeddings, inputs, gpu = sys.argv
 num_labels = int(num_labels)
 k = int(k)
 inputs = eval(inputs)
 
 model = "roberta-large"
-tag = f"{task}_{k}_{num_labels}_{merge_labels}_{mul}_finetune"
+tag = f"{task}_{k}_{num_labels}_{merge_labels}_{mul}__{mask_embeddings}_finetune"
 
 input_type = "prompt-demo"
+
+if mask_embeddings == "mask":
+    use_mask_embeddings = "--use_mask_embeddings"
+elif mask_embeddings == "nomask":
+    use_mask_embeddings = ""
+else:
+    print(f"Unknown mask_embeddings type {mask_embeddings}", file=sys.stderr)
+    sys.exit(-1)
 
 
 def true_parameters(num_demos):
@@ -28,19 +36,20 @@ def main():
         for array_id, seed in enumerate([13, 21, 42, 87, 100]):
             print(f"Start finetune contrastive {tag} {seed} {num_demos} on {gpu}")
             args = [
-                f"--template_path auto_template/{task}/16-{seed}.sort.txt",
-                "--template_id 0",
+                "--template_path", f"auto_template/{task}/16-{seed}.sort.txt",
+                "--template_id", "0",
                 "--demo_filter",
-                "--demo_filter_model sbert-roberta-large",
-                f"--demo_filter_num {demo_filter_num}",
+                "--demo_filter_model", "sbert-roberta-large",
+                "--demo_filter_num", f"{demo_filter_num}",
+                use_mask_embeddings,
                 # f"--demo_filter_num {demo_filter_num}",
-                "--num_sample 1",
-                "--truncate_head",
-                "--use_full_length",
+                # "--num_sample 1",
+                # "--truncate_head",
+                # "--use_full_length",
                 "--save_logit",
-                f"--save_logit_dir {directory}",
+                "--save_logit_dir", f"{directory}",
                 "--model_id 0",
-                f"--array_id {array_id}",
+                "--array_id", f"{array_id}",
             ]
             print(args, flush=True)
 
@@ -49,7 +58,7 @@ def main():
                 "TYPE": f"{input_type}",
                 "TASK": f"{task}",
                 "SEED": f"{seed}",
-                "BS": "2",
+                "BS": "4",
                 "LR": "2e-5",
                 "MODEL": model,
                 "CUDA_VISIBLE_DEVICES": f"{gpu}",

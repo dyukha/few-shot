@@ -3,51 +3,23 @@ import sys
 import subprocess
 
 os.chdir("..")
-_, task, task_name, num_labels, k, merge_labels, mul, mask_embeddings, inputs, gpu = sys.argv
+_, task, task_name, num_labels, k, inputs, gpu = sys.argv
 num_labels = int(num_labels)
 k = int(k)
 inputs = eval(inputs)
 
-model = "knn"
-tag = f"{task}_{k}_{num_labels}_{merge_labels}_{mul}_fewshot_knn_test"
+tag = f"{task}_{k}_{num_labels}_fewshot_random"
 
 input_type = "prompt-demo"
-
-if merge_labels == "separate_labels":
-    demo_filter_merge_labels = ""
-elif merge_labels == "merge_labels":
-    demo_filter_merge_labels = "--demo_filter_merge_labels"
-else:
-    print(f"Unknown merge_labels type {merge_labels}", file=sys.stderr)
-    sys.exit(-1)
-
-if mask_embeddings == "mask":
-    use_mask_embeddings = "--use_mask_embeddings"
-elif mask_embeddings == "nomask":
-    use_mask_embeddings = ""
-else:
-    print(f"Unknown mask_embeddings type {mask_embeddings}", file=sys.stderr)
-    sys.exit(-1)
 
 
 def true_parameters(num_demos):
     demo_filter_num = num_demos
-    if mul == "mul":
-        num_demos = min(num_demos * num_labels, 32)
-        if merge_labels == "merge_labels":
-            demo_filter_num *= num_labels
-    elif mul == "nomul":
-        pass
-    else:
-        print(f"Unknown mul type {mul}", file=sys.stderr)
-        sys.exit(-1)
     directory = f"result/{tag}_{num_demos}_{demo_filter_num}"
     return num_demos, demo_filter_num, directory
 
 
 def main():
-    # inputs = [1, 2, 4, 8, 16]
-
     for num_demos in inputs:
         num_demos, demo_filter_num, directory = true_parameters(num_demos)
         os.makedirs(directory, exist_ok=True)
@@ -57,11 +29,6 @@ def main():
             args = [
                 f"--template_path auto_template/{task}/16-{seed}.sort.txt",
                 "--template_id 0",
-                "--demo_filter",
-                "--demo_filter_model sbert-roberta-large",
-                f"--demo_filter_num {demo_filter_num}",
-                demo_filter_merge_labels,
-                use_mask_embeddings,
                 "--no_train",
                 "--num_sample 1",
                 "--gpt3_in_context_head",
@@ -82,7 +49,7 @@ def main():
                 "SEED": f"{seed}",
                 "BS": "1000",
                 "LR": "1000",
-                "MODEL": model,
+                "MODEL": "roberta-large",
                 "CUDA_VISIBLE_DEVICES": f"{gpu}",
                 "K": f"{k}"
             }
@@ -90,14 +57,14 @@ def main():
             subprocess.run(["bash", "run_experiment_not_save.sh", " ".join(args)], env=env)
 
         subprocess.run(["python", "tools/ensemble.py", "--condition",
-                        f"{{ 'tag': '{tag}', 'task_name': '{task_name}', 'gpt3_in_context_num': {num_demos}, 'few_shot_type': '{input_type}' }}",
+                        f"{{ 'tag': '{tag}', 'task_name': '{task_name}', 'few_shot_type': '{input_type}' }}",
                         "--n_models", "1", "--save_logit_dir", directory])
 
     for num_demos in inputs:
-        num_demos, demo_filter_num, directory = true_parameters(num_demos)
+        num_demos, demo_filter_rate, directory = true_parameters(num_demos)
 
         subprocess.run(["python", "tools/ensemble.py", "--condition",
-                        f"{{ 'tag': '{tag}', 'task_name': '{task_name}', 'gpt3_in_context_num': {num_demos}, 'few_shot_type': '{input_type}' }}",
+                        f"{{ 'tag': '{tag}', 'task_name': '{task_name}', 'few_shot_type': '{input_type}' }}",
                         "--n_models", "1", "--save_logit_dir", directory])
 
 

@@ -178,6 +178,7 @@ class FewShotDataset(torch.utils.data.Dataset):
             mode,
             use_demo,
             use_knn,
+            use_linear_fix,
             mask_embedding_training,
             label_to_word,
             label_word_list,
@@ -186,7 +187,7 @@ class FewShotDataset(torch.utils.data.Dataset):
             lm_weight,
     ):
         self.use_knn = use_knn
-        self.use_linear_fix = mask_embedding_training is not None
+        self.use_linear_fix = use_linear_fix
         self.args = args
         self.task_name = args.task_name
         self.processor = processors_mapping[args.task_name]
@@ -270,11 +271,11 @@ class FewShotDataset(torch.utils.data.Dataset):
         return res
 
     def get_contrastive_embeddings(self, args, mode):
-        cached_filename = os.path.join(args.data_dir, f"cached_contrastive_emb_{mode}_{len(self.support_examples)}_{args.task_name}_{self.seed}_{args.contrastive_dim}")
+        cached_filename = os.path.join(args.data_dir, f"cached_contrastive_emb_{mode}_{len(self.support_examples)}_{args.task_name}_{self.seed}_{args.contrastive_dim}_{args.use_mask_embeddings}")
 
         def compute_embeddings():
             n_negatives = 16
-            cached_model_filename = os.path.join(args.data_dir, f"cached_contrastive_model_{len(self.support_examples)}_{args.task_name}_{self.seed}_{args.contrastive_dim}")
+            cached_model_filename = os.path.join(args.data_dir, f"cached_contrastive_model_{len(self.support_examples)}_{args.task_name}_{self.seed}_{args.contrastive_dim}_{args.use_mask_embeddings}")
             model = ContrastiveModel(self.num_labels, self.support_emb.shape[-1], args.contrastive_dim, n_negatives).to('cuda')
             # print(model)
 
@@ -332,6 +333,13 @@ class FewShotDataset(torch.utils.data.Dataset):
             assert len(self.support_emb) == len(self.support_examples)
             assert len(self.query_emb) == len(self.query_examples)
 
+        if self.mask_embedding_training is not None:
+            self.support_mask_emb = self.get_mask_embeddings(self.support_examples, args.prompt, args.single_sentence_template, "train", args)
+            self.query_mask_emb = self.get_mask_embeddings(self.query_examples, args.prompt, args.single_sentence_template, mode, args)
+            if args.use_mask_embeddings:
+                self.support_emb = self.support_mask_emb
+                self.query_emb = self.query_mask_emb
+
         if self.use_demo and args.demo_filter and self.use_contrastive:
             self.support_emb, self.query_emb = self.get_contrastive_embeddings(args, mode)
 
@@ -341,10 +349,6 @@ class FewShotDataset(torch.utils.data.Dataset):
         if self.use_demo and args.demo_filter:
             self.query_support_sim = self.query_emb @ self.support_emb.T
             self.support_support_sim = self.support_emb @ self.support_emb.T
-
-        if self.use_linear_fix:
-            self.support_mask_emb = self.get_mask_embeddings(self.support_examples, args.prompt, args.single_sentence_template, "train", args)
-            self.query_mask_emb = self.get_mask_embeddings(self.query_examples, args.prompt, args.single_sentence_template, mode, args)
 
 
     def generate_ds(self, args, mode):
@@ -410,6 +414,12 @@ class FewShotDataset(torch.utils.data.Dataset):
                 embeddings=self.query_mask_emb[query_idx],
                 label=self.get_label(self.query_examples[query_idx]),
             )
+        if self.use_knn:
+            logits = [0.0] * len(label_map)
+            for support in supports:
+                logits[self.label_to_id[support.label]] += 1
+            return KnnInputFeatures(logits=logits, label=self.get_label(example))
+
         if self.lm_weight < 1 - 1e-9:
             logits = [0.0] * len(label_map)
             for support in supports:
@@ -509,7 +519,7 @@ class FewShotDataset(torch.utils.data.Dataset):
             outputs = self.mask_embedding_training.evaluate(eval_dataset=ds)
             return outputs.predictions
 
-        return get_cached(cached_features_file, args.overwrite_cache, "mask embeddings", compute_mask_embeddings)
+        return torch.tensor(get_cached(cached_features_file, args.overwrite_cache, "mask embeddings", compute_mask_embeddings), device='cuda')
 
     def get_split_name(self, mode, task_name) -> str:
         if mode == 'train':

@@ -3,13 +3,13 @@ import sys
 import subprocess
 
 os.chdir("..")
-_, task, task_name, num_labels, k, merge_labels, mul, inputs, gpu = sys.argv
+_, task, task_name, num_labels, k, merge_labels, mul, mask_embeddings, inputs, gpu = sys.argv
 num_labels = int(num_labels)
 k = int(k)
 inputs = eval(inputs)
 
 model = "roberta-large"
-tag = f"{task}_{k}_{num_labels}_{merge_labels}_{mul}_fewshot_similar_contrastive"
+tag = f"{task}_{k}_{num_labels}_{merge_labels}_{mul}_{mask_embeddings}_fewshot_similar_contrastive"
 
 input_type = "prompt-demo"
 
@@ -19,6 +19,14 @@ elif merge_labels == "merge_labels":
     demo_filter_merge_labels = "--demo_filter_merge_labels"
 else:
     print(f"Unknown merge_labels type {merge_labels}", file=sys.stderr)
+    sys.exit(-1)
+
+if mask_embeddings == "mask":
+    use_mask_embeddings = "--use_mask_embeddings"
+elif mask_embeddings == "nomask":
+    use_mask_embeddings = ""
+else:
+    print(f"Unknown mask_embeddings type {mask_embeddings}", file=sys.stderr)
     sys.exit(-1)
 
 
@@ -53,6 +61,7 @@ def main():
                 "--demo_filter_model sbert-roberta-large",
                 f"--demo_filter_num {demo_filter_num}",
                 demo_filter_merge_labels,
+                use_mask_embeddings,
                 "--use_contrastive",
                 "--contrastive_dim 100",
                 "--no_train",

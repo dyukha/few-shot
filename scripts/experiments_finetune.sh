@@ -1,5 +1,5 @@
 mkdir -p ../out/finetune_16
-parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python finetune_contrastive.py {1} {2} {3} 16 merge_labels mul "[2]" ${arr[{%}]} |& tee ../out/finetune_16/{1}.txt' ::: \
+parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python finetune.py {1} {2} {3} 16 merge_labels mul mask "[8]" ${arr[{%}]} |& tee ../out/finetune_16/{1}.txt' ::: \
     SST-2 sst-2 2 \
     cr cr 2 \
     mr mr 2 \
@@ -17,7 +17,7 @@ parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python finetune_contrastive.py {1} {2}
     STS-B sts-b/pearson 2 \
 
 mkdir -p ../out/finetune_128
-parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python finetune_contrastive.py {1} {2} {3} 128 merge_labels mul "[2]" ${arr[{%}]} |& tee ../out/finetune_128/{1}.txt' ::: \
+parallel -j4 --lb -n 3 'arr=(na 0 1 2 3); python finetune.py {1} {2} {3} 128 merge_labels mul mask "[8]" ${arr[{%}]} |& tee ../out/finetune_128/{1}.txt' ::: \
     SST-2 sst-2 2 \
     cr cr 2 \
     mr mr 2 \

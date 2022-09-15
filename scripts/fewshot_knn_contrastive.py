@@ -9,7 +9,7 @@ k = int(k)
 inputs = eval(inputs)
 
 model = "knn"
-tag = f"{task}_{k}_{num_labels}_{merge_labels}_{mul}_fewshot_knn_test"
+tag = f"{task}_{k}_{num_labels}_{merge_labels}_{mul}_fewshot_knn_contrastive"
 
 input_type = "prompt-demo"
 
@@ -62,6 +62,8 @@ def main():
                 f"--demo_filter_num {demo_filter_num}",
                 demo_filter_merge_labels,
                 use_mask_embeddings,
+                "--use_contrastive",
+                "--contrastive_dim 100",
                 "--no_train",
                 "--num_sample 1",
                 "--gpt3_in_context_head",
